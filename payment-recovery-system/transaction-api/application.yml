@@ -1,0 +1,22 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres:5432/txn_db
+    username: dev
+    password: dev
+  jpa:
+    hibernate:
+      ddl-auto: none
+  redis:
+    host: redis
+    port: 6379
+
+flyway:
+  enabled: true
+  locations: classpath:db/migration,filesystem:flyway/sql
+
+server:
+  port: 8080
+
+logging:
+  level:
+    root: INFO
