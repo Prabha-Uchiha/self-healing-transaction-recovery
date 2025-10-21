@@ -1,1 +1,36 @@
+version: '3.8'
 services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: dev
+      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: txn_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  transaction-api:
+    build: ./transaction-api
+    depends_on: [postgres, redis]
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/txn_db
+    ports:
+      - "8080:8080"
+
+  retry-service:
+    build: ./retry-service
+    depends_on: [postgres, redis]
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/txn_db
+    ports:
+      - "8090:8090"
+
+volumes:
+  pgdata:
