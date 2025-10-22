@@ -1,4 +1,4 @@
-package com.selfhealing.paymentrecovey.payment_recovery_system;
+package com.selfhealing.paymentrecovery.payment_recovery_system;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
