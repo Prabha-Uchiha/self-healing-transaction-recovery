@@ -1,33 +1,33 @@
 package com.project.transactionapi.model;
 
 import jakarta.persistence.*;
-import java.time.OffsetDateTime;
-import java.util.UUID;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "transactions")
 public class Transaction {
     @Id
-    private UUID id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    private long amount;
-    private String currency;
-    private String status; // PENDING, SUCCESS, FAILED, RETRYING, FAILED_PERMANENTLY
-    private int retryCount = 0;
-    private OffsetDateTime createdAt;
-    private OffsetDateTime updatedAt;
-    private String idempotencyKey;
-    private String provider;
+    @Column(nullable = false, unique = true)
+    private String txnId;
 
+    private Double amount;
+    private String status;           // PENDING, SUCCESS, FAILED
+    private int retryCount;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+
+    // Getters, Setters, Constructors
     @PrePersist
-    public void prePersist() {
-        if (id == null) id = UUID.randomUUID();
-        createdAt = OffsetDateTime.now();
-        updatedAt = OffsetDateTime.now();
+    public void onCreate() {
+        createdAt = LocalDateTime.now();
+        updatedAt = createdAt;
     }
 
     @PreUpdate
-    public void preUpdate() { updatedAt = OffsetDateTime.now(); }
-
-    // getters & setters omitted for brevity
+    public void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
 }
