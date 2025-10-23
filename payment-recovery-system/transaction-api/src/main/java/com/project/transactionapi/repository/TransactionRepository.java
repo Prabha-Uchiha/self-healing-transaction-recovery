@@ -8,6 +8,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface TransactionRepository extends JpaRepository<Transaction, UUID> {
-    Optional<Transaction> findByIdempotencyKey(String idempotencyKey);
+public interface TransactionRepository extends JpaRepository<Transaction,Long>{
+  Optional<Transaction> findByTxnId(String txnId);
 }
