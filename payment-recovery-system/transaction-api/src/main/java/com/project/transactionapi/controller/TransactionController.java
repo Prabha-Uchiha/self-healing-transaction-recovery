@@ -1,50 +1,35 @@
 package com.project.transactionapi.controller;
 
-import com.project.transactionapi.model.Transaction;
-import com.project.transactionapi.repository.TransactionRepository;
 import com.project.shared.dto.PayRequest;
 import com.project.shared.dto.PayResponse;
+import com.project.transactionapi.model.Transaction;
+import com.project.transactionapi.service.TransactionService;
+import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.beans.factory.annotation.Autowired;
 
-import java.util.Optional;
+import java.time.OffsetDateTime;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/v1/transactions")
 public class TransactionController {
+    private final TransactionService service;
+    private final Logger log = LoggerFactory.getLogger(TransactionController.class);
 
-    @Autowired
-    private TransactionRepository repo;
+    public TransactionController(TransactionService service) { this.service = service; }
 
     @PostMapping("/pay")
     public ResponseEntity<PayResponse> pay(@RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
-                                           @RequestBody PayRequest req) {
-        // Idempotency via DB lookup
-        if (idempotencyKey != null) {
-            Optional<Transaction> existing = repo.findByIdempotencyKey(idempotencyKey);
-            if (existing.isPresent()) {
-                Transaction t = existing.get();
-                return ResponseEntity.ok(new PayResponse(t.getId().toString(), t.getStatus()));
-            }
-        }
-
-        Transaction txn = new Transaction();
-        txn.setAmount(req.getAmount());
-        txn.setCurrency(req.getCurrency());
-        txn.setStatus("PENDING");
-        txn.setProvider(req.getProvider());
-        txn.setIdempotencyKey(idempotencyKey);
-        repo.save(txn);
-
-        // call provider stub async in later days — for Day1 we simulate success/fail in retry service
-        return ResponseEntity.ok(new PayResponse(txn.getId().toString(), txn.getStatus()));
+                                           @Valid @RequestBody PayRequest req) {
+        Transaction txn = service.createAndProcess(idempotencyKey, req.getAmount(), req.getCurrency(), "STUB");
+        return new ResponseEntity<>(new PayResponse(txn.getTxnId(), txn.getStatus(), txn.getCreatedAt()), HttpStatus.ACCEPTED);
     }
 
-    @GetMapping("/transactions/{id}")
-    public ResponseEntity<Transaction> get(@PathVariable String id) {
-        return repo.findById(java.util.UUID.fromString(id))
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    @GetMapping("/{txnId}")
+    public ResponseEntity<Transaction> get(@PathVariable String txnId) {
+        return service.findByTxnId(txnId).map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 }

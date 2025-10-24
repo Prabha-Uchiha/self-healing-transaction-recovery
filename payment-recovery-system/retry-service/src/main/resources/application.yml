@@ -1,0 +1,14 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres:5432/txn_db
+    username: dev
+    password: dev
+  jdbc:
+    template:
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+server:
+  port: 8090
