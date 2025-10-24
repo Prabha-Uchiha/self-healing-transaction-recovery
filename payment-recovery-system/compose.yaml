@@ -1,39 +1,123 @@
-version: '3.8'
+# 🛠️ Production-Ready Docker Compose (No version tag — modern Compose V2+)
 services:
-  postgres:
-    image: postgres:15
+  # ==========================
+  # 🚀 Transaction API Service
+  # ==========================
+  transaction-api:
+    build:
+      context: ./transaction-api
+      dockerfile: Dockerfile
+    container_name: transaction-api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
     environment:
-      POSTGRES_USER: dev
-      POSTGRES_PASSWORD: dev
-      POSTGRES_DB: txn_db
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/transactions
+      SPRING_DATASOURCE_USERNAME: admin
+      SPRING_DATASOURCE_PASSWORD: admin
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_PROFILES_ACTIVE: prod
+      KAFKA_BROKER_URL: kafka:9092
+      REDIS_HOST: redis
+    depends_on:
+      - postgres
+      - redis
+      - kafka
+    networks:
+      - backend
+
+  # ==========================
+  # 🔁 Retry & Recovery Service
+  # ==========================
+  retry-service:
+    build:
+      context: ./retry-service
+      dockerfile: Dockerfile
+    container_name: retry-service
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/transactions
+      SPRING_DATASOURCE_USERNAME: admin
+      SPRING_DATASOURCE_PASSWORD: admin
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_PROFILES_ACTIVE: prod
+      KAFKA_BROKER_URL: kafka:9092
+      REDIS_HOST: redis
+    depends_on:
+      - postgres
+      - redis
+      - kafka
+    networks:
+      - backend
+
+  # ==========================
+  # 🗄️ PostgreSQL Database
+  # ==========================
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: transactions
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    networks:
+      - backend
 
+  # ==========================
+  # ⚡ Redis Cache
+  # ==========================
   redis:
-    image: redis:7
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
     ports:
       - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - backend
 
-  transaction-api:
-    build: ./transaction-api
-    depends_on:
-      - postgres
-      - redis
+  # ==========================
+  # 📨 Kafka + Zookeeper (for Async Messaging)
+  # ==========================
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.1
+    container_name: zookeeper
     environment:
-      SPRING_PROFILES_ACTIVE: default
-    ports:
-      - "8080:8080"
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - backend
 
-  retry-service:
-    build: ./retry-service
-    depends_on:
-      - postgres
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: kafka
+    ports:
+      - "9092:9092"
     environment:
-      SPRING_PROFILES_ACTIVE: default
-    ports:
-      - "8090:8090"
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    depends_on:
+      - zookeeper
+    networks:
+      - backend
 
+# ==========================
+# 🧱 Persistent Storage & Network
+# ==========================
 volumes:
   pgdata:
+  redis_data:
+
+networks:
+  backend:
+    driver: bridge
