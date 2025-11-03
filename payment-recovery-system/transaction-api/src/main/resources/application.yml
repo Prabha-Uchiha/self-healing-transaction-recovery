@@ -2,7 +2,7 @@ spring:
   datasource:
     url: jdbc:postgresql://postgres:5432/txn_db
     username: dev
-    password: dev
+    password: #@!dev
   jpa:
     hibernate:
       ddl-auto: validate
