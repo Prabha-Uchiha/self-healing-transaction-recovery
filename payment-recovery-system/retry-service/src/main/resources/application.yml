@@ -1,14 +1,34 @@
+server:
+  port: 8081
+
 spring:
+  application:
+    name: retry-service
+
   datasource:
-    url: jdbc:postgresql://postgres:5432/txn_db
-    username: dev
-    password: dev
-  jdbc:
-    template:
+    url: jdbc:postgresql://postgres:5432/transactions
+    username: admin
+    password: admin
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  kafka:
+    bootstrap-servers: kafka:9092
+
+  redis:
+    host: redis
+    port: 6379
+
 management:
   endpoints:
     web:
       exposure:
         include: health,info
-server:
-  port: 8090
+

@@ -1,67 +1,13 @@
-# 🛠️ Production-Ready Docker Compose (No version tag — modern Compose V2+)
 services:
-  # ==========================
-  # 🚀 Transaction API Service
-  # ==========================
-  transaction-api:
-    build:
-      context: ./transaction-api
-      dockerfile: Dockerfile
-    container_name: transaction-api
-    restart: unless-stopped
-    ports:
-      - "8080:8080"
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/transactions
-      SPRING_DATASOURCE_USERNAME: admin
-      SPRING_DATASOURCE_PASSWORD: admin
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      SPRING_PROFILES_ACTIVE: prod
-      KAFKA_BROKER_URL: kafka:9092
-      REDIS_HOST: redis
-    depends_on:
-      - postgres
-      - redis
-      - kafka
-    networks:
-      - backend
-
-  # ==========================
-  # 🔁 Retry & Recovery Service
-  # ==========================
-  retry-service:
-    build:
-      context: ./retry-service
-      dockerfile: Dockerfile
-    container_name: retry-service
-    restart: unless-stopped
-    ports:
-      - "8081:8081"
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/transactions
-      SPRING_DATASOURCE_USERNAME: admin
-      SPRING_DATASOURCE_PASSWORD: admin
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      SPRING_PROFILES_ACTIVE: prod
-      KAFKA_BROKER_URL: kafka:9092
-      REDIS_HOST: redis
-    depends_on:
-      - postgres
-      - redis
-      - kafka
-    networks:
-      - backend
-
   # ==========================
   # 🗄️ PostgreSQL Database
   # ==========================
   postgres:
     image: postgres:15-alpine
     container_name: postgres
-    restart: unless-stopped
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin
+      POSTGRES_USER: ${DB_USER:-admin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-admin}
       POSTGRES_DB: transactions
     ports:
       - "5432:5432"
@@ -85,7 +31,7 @@ services:
       - backend
 
   # ==========================
-  # 📨 Kafka + Zookeeper (for Async Messaging)
+  # 📨 Kafka + Zookeeper
   # ==========================
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.1
@@ -111,8 +57,60 @@ services:
     networks:
       - backend
 
+  # ==========================
+  # 🚀 Transaction API Service
+  # ==========================
+  transaction-api:
+    build:
+      context: .
+      dockerfile: ./transaction-api/Dockerfile
+    container_name: transaction-api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/transactions
+      SPRING_DATASOURCE_USERNAME: ${DB_USER:-admin}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-admin}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_PROFILES_ACTIVE: prod
+      KAFKA_BROKER_URL: kafka:9092
+      REDIS_HOST: redis
+    depends_on:
+      - postgres
+      - redis
+      - kafka
+    networks:
+      - backend
+
+  # ==========================
+  # 🔁 Retry & Recovery Service
+  # ==========================
+  retry-service:
+    build:
+      context: .
+      dockerfile: ./retry-service/Dockerfile
+    container_name: retry-service
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/transactions
+      SPRING_DATASOURCE_USERNAME: ${DB_USER:-admin}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-admin}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_PROFILES_ACTIVE: prod
+      KAFKA_BROKER_URL: kafka:9092
+      REDIS_HOST: redis
+    depends_on:
+      - postgres
+      - redis
+      - kafka
+    networks:
+      - backend
+
 # ==========================
-# 🧱 Persistent Storage & Network
+# 🧱 Persistent Volumes & Network
 # ==========================
 volumes:
   pgdata:
